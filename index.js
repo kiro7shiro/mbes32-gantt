@@ -15,27 +15,11 @@ function dateDiff(date1, date2, { unit = 'days' } = {}) {
         throw new Error(`Invalid unit: ${unit}`)
     }
     const diff = Math.abs(date2.getTime() - date1.getTime())
-    return Math.floor(diff / units[unit])
+    return Math.floor(diff / units[unit]) + 1
 }
-
-const dataMap = [
-    { id: 'matchcode', key: 'MATCHCODE', parser: String },
-    { id: 'start', key: 'Veranstaltungsbeginn', parser: excelDateToJsDate },
-    { id: 'end', key: 'Veranstaltungsende', parser: excelDateToJsDate },
-    { id: 'status', key: 'Buchungsstatus', parser: String },
-    { id: 'type', key: 'Veranstaltungstyp', parser: String },
-    { id: 'kind', key: 'Veranstaltungsart', parser: String },
-    { id: 'name', key: 'MATCHCODE', parser: String }
-]
 
 let ids = 0
 const dataTransforms = [
-    {
-        id: 'myDuration',
-        transformer: function (item) {
-            return dateDiff(item.start, item.end)
-        }
-    },
     {
         id: 'id',
         transformer: function () {
@@ -44,13 +28,54 @@ const dataTransforms = [
         }
     },
     {
+        id: 'matchcode',
+        transformer: function (item) {
+            return item['MATCHCODE']
+        }
+    },
+    {
+        id: 'start',
+        transformer: function (item) {
+            return excelDateToJsDate(item['Veranstaltungsbeginn'])
+        }
+    },
+    {
+        id: 'end',
+        transformer: function (item) {
+            return excelDateToJsDate(item['Veranstaltungsende'])
+        }
+    },
+    {
+        id: 'myDuration',
+        transformer: function (item) {
+            const start = excelDateToJsDate(item['Veranstaltungsbeginn'])
+            const end = excelDateToJsDate(item['Veranstaltungsende'])
+            return dateDiff(start, end)
+        }
+    },
+    {
+        id: 'kind',
+        transformer: function (item) {
+            return item['Veranstaltungsart']
+        }
+    },
+    {
+        id: 'name',
+        transformer: function (item) {
+            return item['Name']
+        }
+    },
+    {
         id: 'progress',
         transformer: function (item) {
-			const now = new Date()
-			if (item.start.getTime() > now.getTime()) return 0
-			if (item.end.getTime() <= now.getTime()) return 100
-			const todayDiff = dateDiff(now, item.end)
-			const progress = 100 - (todayDiff / item.duration) * 100
+            const now = new Date()
+            const start = excelDateToJsDate(item['Veranstaltungsbeginn'])
+            const end = excelDateToJsDate(item['Veranstaltungsende'])
+            if (start.getTime() > now.getTime()) return 0
+            if (end.getTime() <= now.getTime()) return 100
+            const duration = dateDiff(start, end)
+            const todayDiff = dateDiff(now, end)
+            const progress = 100 - (todayDiff / duration) * 100
             return progress
         }
     }
@@ -61,20 +86,16 @@ const dataBlacklist = [
         return item?.kind === 'Wartung'
     },
     function (item) {
-        return item?.duration >= 364
+        return item?.myDuration >= 364
     }
 ]
 
-function parseData(data, { mappings = [], transforms = [], blacklist = [] } = {}) {
-    const result = []
+function parseData(data, { transforms = [], blacklist = [] } = {}) {
+    let result = []
     for (const raw of data) {
-        const item = {}
-        for (const { id, key, parser } of mappings) {
-            item[id] = parser(raw[key])
-        }
-        if (mappings.length < 1) Object.assign(item, raw)
+        let item = {}
         for (const { id, transformer } of transforms) {
-            item[id] = transformer(item)
+            item[id] = transformer(raw)
         }
         if (!blacklist.some((predicate) => predicate(item))) result.push(item)
     }
@@ -88,7 +109,7 @@ upload.addEventListener('change', (e) => {
         const workbook = XLSX.read(data, { type: 'array' })
         const sheet = workbook.Sheets[workbook.SheetNames[0]]
         const json = XLSX.utils.sheet_to_json(sheet)
-        const parsed = parseData(json, { mappings: dataMap, transforms: dataTransforms, blacklist: dataBlacklist })
+        const parsed = parseData(json, { transforms: dataTransforms, blacklist: dataBlacklist })
         console.log(parsed)
         const ganttChart = new Gantt('#gantt-chart', parsed, { auto_move_label: true, container_height: 500 })
     }
