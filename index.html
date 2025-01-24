@@ -3,12 +3,15 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Gantt</title>
+		<title>gantt</title>
+		<!-- use version 0.20.3 -->
+        <script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/frappe-gantt/dist/frappe-gantt.umd.js"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/frappe-gantt/dist/frappe-gantt.css">	
 	</head>
 	<body>
 		<input type="file" id="upload">upload</input>
-        <!-- use version 0.20.3 -->
-        <script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+		<div id="gantt-chart" style="height: 500px; width: 1000px;"></div>
 		<script src="index.js"></script>
 	</body>
 </html>
