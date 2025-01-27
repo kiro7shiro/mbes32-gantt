@@ -1,3 +1,18 @@
+/**
+ * TODO:
+ * - [ ] save app data
+ * - [ ] load app data
+ * - [ ] events gantt chart
+ *      - [ ] load file data into gantt tasks
+ *      - [ ] build gantt chart
+ *      - [ ] show gantt chart
+ * - [ ] events todos
+ *      - [ ] create, update, delete todos
+ *      - [ ] show todo status
+ */
+
+import { EventTask } from './EventTask.js'
+
 const upload = document.getElementById('upload')
 
 function excelDateToJsDate(number) {
@@ -39,17 +54,50 @@ function addOrSubtractDate(startDate, value, { unit = 'day' } = {}) {
 let ids = 0
 
 class EventData {
-    constructor(raw) {
-        if (!raw) {
-            throw new Error('Invalid input: raw data is required')
+    static errors = {
+        INVALID_INPUT: class InvalidInput extends Error {
+            constructor(message) {
+                super(message)
+            }
+        },
+        MISSING_HEADERS: class MissingHeaders extends Error {
+            constructor(missingHeaders) {
+                super(`Missing row data headers: ${missingHeaders.join(', ')}`)
+                this.missingHeaders = missingHeaders
+            }
         }
-        this.id = ++ids
-        this.matchcode = raw['MATCHCODE'] || null
-        this.start = raw['Veranstaltungsbeginn'] ? excelDateToJsDate(raw['Veranstaltungsbeginn']) : null
-        this.end = raw['Veranstaltungsende'] ? excelDateToJsDate(raw['Veranstaltungsende']) : null
+    }
+
+    static dataMap = {
+        MATCHCODE: 'MATCHCODE',
+        START: 'Veranstaltungsbeginn',
+        END: 'Veranstaltungsende',
+        KIND: 'Veranstaltungsart',
+        NAME: 'Name'
+    }
+
+    constructor(data, { dataMap = EventData.dataMap } = {}) {
+        if (!data) throw new EventData.errors.INVALID_INPUT('Invalid input: data is required')
+        if (!dataMap) throw new EventData.errors.INVALID_INPUT('Invalid input: dataMap is required')
+        const missingHeaders = []
+        for (const key in dataMap) {
+            const header = dataMap[key]
+            if (!(header in data)) missingHeaders.push(header)
+        }
+        if (missingHeaders.length > 0) {
+            throw new EventData.errors.MISSING_HEADERS(missingHeaders)
+        }
+
+        //this.id = ++ids
+        //this.id = new Date().getTime() + Math.floor(Math.random() * 1000)
+        this.id = Math.floor(Math.random() * 1000)
+
+        this.matchcode = data[dataMap.MATCHCODE] || null
+        this.start = data[dataMap.START] ? excelDateToJsDate(data[dataMap.START]) : null
+        this.end = data[dataMap.END] ? excelDateToJsDate(data[dataMap.END]) : null
         this.duration = this.start && this.end ? dateDiff(this.start, this.end) : 0
-        this.kind = raw['Veranstaltungsart'] || null
-        this.name = raw['Name'] || null
+        this.kind = data[dataMap.KIND] || null
+        this.name = data[dataMap.NAME] || null
         this.progress = this.start && this.end ? this.getProgress() : 0
     }
 
@@ -67,22 +115,66 @@ class EventData {
 
 const dataBlacklist = [
     function (item) {
-        return item?.kind === 'Wartung'
-    },
-    function (item) {
-        return item?.duration >= 364
+        return item['Veranstaltungsart'] === 'Wartung'
     }
 ]
 
-function parseData(data, { blacklist = [] } = {}) {
+function parse(data, { blacklist = [] } = {}) {
     let result = []
-    for (const raw of data) {
-        const eventData = new EventData(raw)
-        if (!blacklist.some((predicate) => predicate(eventData))) result.push(eventData)
+    for (const row of data) {
+        try {
+            const eventData = new EventData(row)
+            if (!blacklist.some((predicate) => predicate(eventData))) result.push(eventData)
+        } catch (error) {
+            if (error instanceof EventData.errors.MISSING_HEADERS) {
+                //console.error(error.message)
+                for (const header of error.missingHeaders) {
+                    row[header] = undefined
+                }
+                result.push(...parse([row], { blacklist }))
+                continue
+            }
+            throw error
+        }
     }
     return result
 }
 
+function downloadJsonFile(data, filename) {
+    const json = JSON.stringify(data, null, 4)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+}
+
+function handleJsonFileInput(event) {
+    const file = event.target.files[0]
+    if (!file || file.type !== 'application/json') {
+        throw new Error('Only JSON files are allowed')
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+        try {
+            const data = JSON.parse(event.target.result)
+            // data is now an array of JSON objects
+            console.log(data)
+            // do something with the data
+        } catch (error) {
+            throw new Error(`Error parsing JSON file: ${error.message}`)
+        }
+    }
+    reader.onerror = (event) => {
+        throw new Error(`Error reading JSON file: ${event.target.error.message}`)
+    }
+    reader.readAsText(file)
+}
+
+// TODO : explore sheet_to_json options: https://docs.sheetjs.com/docs/api/utilities/array#array-output
 upload.addEventListener('change', (e) => {
     const reader = new FileReader()
     reader.onload = function () {
@@ -90,10 +182,26 @@ upload.addEventListener('change', (e) => {
         const workbook = XLSX.read(data, { type: 'array' })
         const sheet = workbook.Sheets[workbook.SheetNames[0]]
         const json = XLSX.utils.sheet_to_json(sheet)
-        const parsed = parseData(json, { blacklist: dataBlacklist })
-        console.log(parsed)
-        const ganttChart = new Gantt('#gantt-chart', parsed, { auto_move_label: true, container_height: 500 })
+        console.log(json.length)
+        const filtered = json.filter((eventTask) => !dataBlacklist.some((predicate) => predicate(eventTask)))
+        console.log(filtered)
+        const eventTasks = EventTask.fromArray(json)
+        console.log(eventTasks)
+        const ganttChart = new Gantt('#gantt-chart', eventTasks, { auto_move_label: true, container_height: 500 })
         console.log(ganttChart)
+        const defs = document.createElement('defs')
+        const svg = ganttChart.$svg
+        for (const eventTask of eventTasks) {
+            const gradient = eventTask.createGradient()
+            svg.insertAdjacentElement('afterbegin', gradient)
+        }
+        
+        //svg.insertAdjacentElement('afterbegin', defs)
+        for (const task of ganttChart.tasks) {
+            const gradient = document.getElementById(`${task.id}_gradient`)
+            const bar = document.querySelector('.bar-wrapper[data-id="' + task.id + '"] .bar')
+            bar.setAttribute('style', 'fill:url(#' + gradient.id + ');')
+        }
     }
     reader.readAsArrayBuffer(e.target.files[0])
 })
