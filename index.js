@@ -184,23 +184,21 @@ upload.addEventListener('change', (e) => {
         const json = XLSX.utils.sheet_to_json(sheet)
         console.log(json.length)
         const filtered = json.filter((eventTask) => !dataBlacklist.some((predicate) => predicate(eventTask)))
-        console.log(filtered)
-        const eventTasks = EventTask.fromArray(json)
-        console.log(eventTasks)
+        console.log(filtered.length)
+        const eventTasks = EventTask.fromArray(filtered)
         const ganttChart = new Gantt('#gantt-chart', eventTasks, { auto_move_label: true, container_height: 500 })
-        console.log(ganttChart)
-        const defs = document.createElement('defs')
+        console.log(ganttChart.tasks.length)        
         const svg = ganttChart.$svg
         for (const eventTask of eventTasks) {
             const gradient = eventTask.createGradient()
             svg.insertAdjacentElement('afterbegin', gradient)
         }
-        
-        //svg.insertAdjacentElement('afterbegin', defs)
         for (const task of ganttChart.tasks) {
             const gradient = document.getElementById(`${task.id}_gradient`)
-            const bar = document.querySelector('.bar-wrapper[data-id="' + task.id + '"] .bar')
-            bar.setAttribute('style', 'fill:url(#' + gradient.id + ');')
+            const bar = document.querySelector('.bar-wrapper[data-id="' + task.id + '"] .bar-progress')
+			bar.style.fill = 'url(#' + gradient.id + ')'
+            //bar.setAttribute('style', 'fill:url(#' + gradient.id + ');')
+            //bar.setAttribute('fill', 'url(#' + gradient.id + ')')
         }
     }
     reader.readAsArrayBuffer(e.target.files[0])
