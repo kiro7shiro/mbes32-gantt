@@ -20,7 +20,11 @@
     cursor: pointer;
 }
 
-.event-details {
+.event-infos {
+    border-radius: 8px;
+    overflow: hidden;
+}
+.event-todos {
     border-radius: 8px;
     overflow: hidden;
 }

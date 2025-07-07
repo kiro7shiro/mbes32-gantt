@@ -10,9 +10,14 @@
 //      [ ] create, update, delete todos
 //      [ ] show todo status
 
-import { render } from './src/templates.js'
-import { EventTask } from './src/EventTask.js'
+import { compileOptions, preload, render, renderSync, Control } from './js-templates/index.js'
+
 import { excelDateToJsDate } from './src/helper.js'
+import { EventTask } from './src/EventTask.js'
+import { EventTodos } from './src/EventTodos.js'
+import { EventEditor } from './src/EventEditor.js'
+
+import { EventInfos } from './src/EventInfos.js'
 
 const eventDataBlacklist = [
     function (item) {
@@ -28,9 +33,10 @@ const eventDataBlacklist = [
 ]
 
 class App {
-    constructor(fileInput, { blacklist = [] } = {}) {
-        if (!fileInput) throw new Error('fileInput is required')
-        this.fileInput = document.getElementById(fileInput)
+    constructor({ blacklist = [] } = {}) {
+        this.menuBar = new Control(document.getElementById('menuBar'), '')
+        this.menuBar.on('fileInput', this.handleFileInput.bind(this))
+        this.eventInfos = EventInfos.buildSync({ container: '#eventInfos' })
         this.blacklist = blacklist
         this.eventTasks = []
         this.ganttChartOptions = {
@@ -38,12 +44,29 @@ class App {
             popup_on: 'hover'
         }
         this.ganttChart = null
-        this.fileInput.addEventListener('change', this.handleFileInput.bind(this))
+        this.eventTodos = []
+    }
+    createEventTodo(id, text, { done = false } = {}) {
+        const todo = {
+            id,
+            text,
+            done
+        }
+        this.eventTodos.push(todo)
+        return todo
+    }
+    deleteEventTodo(id, text) {
+        const index = this.eventTodos.findIndex((todo) => todo.id === id && todo.text === text)
+        this.eventTodos.splice(index, 1)
+    }
+    toggleEventTodo(id, text) {
+        const todo = this.eventTodos.find((todo) => todo.id === id && todo.text === text)
+        todo.done = !todo.done
     }
     createGanttChart(ganttContainer, eventTasks, options = {}) {
         this.eventTasks = eventTasks
         this.ganttChart = new Gantt(ganttContainer, eventTasks, options)
-        const { $container: container, $svg: svg } = this.ganttChart
+        const { $container: container, $header: header, $svg: svg, $side_header: sideHeader, $today_button: todayButton } = this.ganttChart
         svg.style.display = 'none'
         for (const eventTask of this.eventTasks) {
             const gradient = eventTask.createGradient()
@@ -52,24 +75,54 @@ class App {
             svg.insertAdjacentElement('afterbegin', gradient)
             svg.insertAdjacentElement('afterbegin', liteGradient)
         }
+        const now = new Date()
         for (const task of this.ganttChart.tasks) {
             const bar = document.querySelector('.bar-wrapper[data-id="' + task.id + '"] .bar')
             const barProgress = document.querySelector('.bar-wrapper[data-id="' + task.id + '"] .bar-progress')
             const text = document.querySelector('.bar-wrapper[data-id="' + task.id + '"] .bar-label')
-            bar.style.fill = `url(#${task.id}_lite_gradient)`
-            barProgress.style.fill = `url(#${task.id}_gradient)`
-            text.innerHTML = task.id.replace('_', ' ')
+            if (task.end.getTime() < now.getTime()) {
+                bar.style.fill = `url(#${task.id}_lite_gradient)`
+                barProgress.style.fill = `none`
+            } else {
+                bar.style.fill = `url(#${task.id}_lite_gradient)`
+                barProgress.style.fill = `url(#${task.id}_gradient)`
+            }
+            text.innerHTML = task.id.replaceAll('_', ' ')
         }
         svg.style.display = 'block'
+        header.classList.add('w3-theme')
+        todayButton.classList.add('w3-theme', 'w3-hover-white')
+        sideHeader.classList.add('w3-theme')
+        const upperTextLabels = header.querySelectorAll('.upper-text')
+        for (const label of upperTextLabels) {
+            label.classList.add('w3-theme')
+        }
         container.addEventListener('click', this.handleGanttChartClick.bind(this))
     }
-    async handleGanttChartClick(event) {
+    async handleEventDetailsClick(event) {
+        const { id } = event.target
+        if (!id) return
+        if (id === 'createEventTodo') {
+            let text = prompt('Enter todo text:')
+            if (text === '') return
+            const todoId = event.target.closest('.event-details').id
+            console.log({ todoId, text })
+            this.createEventTodo(todoId, text)
+        } else if (id === 'deleteEventTodo') {
+            const todoId = event.target.closest('.event-details').id
+            const todo = this.eventTodos.find((todo) => todo.id === todoId)
+            this.deleteEventTodo(todo.id, todo.text)
+        }
+    }
+    handleGanttChartClick(event) {
         const task = event.target.closest('.bar-wrapper')
         if (!task) return
         const eventTask = this.eventTasks.find((eventTask) => eventTask.id === task.dataset.id)
         if (!eventTask) return
-        const html = await render('/views/EventDetails.ejs', eventTask)
-        document.getElementById('event-details').innerHTML = html
+        console.log(eventTask)
+        const eventTodos = this.eventTodos.filter((todo) => todo.id === eventTask.id)
+        console.log(eventTodos)
+        this.eventInfos.renderSync({ ...eventTask })
     }
     handleFileInput(event) {
         const self = this
@@ -83,12 +136,38 @@ class App {
             const eventTasks = EventTask.fromArray(filtered)
             self.createGanttChart('#gantt-chart', eventTasks, self.ganttChartOptions)
         }
-        reader.readAsArrayBuffer(event.target.files[0])
+        reader.readAsArrayBuffer(event.detail.files[0])
     }
 }
 
-const app = new App('file-input', { blacklist: eventDataBlacklist })
-console.log(app)
+async function main() {
+    compileOptions.async = false
+    await preload()
+    const app = new App({ blacklist: eventDataBlacklist })
+    console.log(app)
+}
+
+main()
+
+async function test() {
+    const eventEditor = await EventEditor.build(/* {
+        infos: { id: 'test-id', taskName: 'test-task', start: new Date(), end: new Date(), halls: ['2.2', '1.2'] },
+        todos: [
+            { id: 'test-id', text: 'test-todo', done: false },
+            { id: 'test-id-2', text: 'test-todo-2', done: true }
+        ]
+    } */)
+    await eventEditor.render({ id: 'test-id', taskName: 'test-task', start: new Date(), end: new Date(), halls: ['2.2', '1.2'] }, [
+        { text: 'test-todo', done: false },
+        { text: 'test-todo-2', done: true }
+    ])
+    document.body.insertAdjacentElement('beforeend', eventEditor.element)
+    console.log(eventEditor)
+}
+
+//test()
+
+// make it sync
 
 function downloadJsonFile(data, filename) {
     const json = JSON.stringify(data, null, 4)

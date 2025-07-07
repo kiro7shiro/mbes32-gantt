@@ -14,7 +14,8 @@ export class EventTask {
         eventStart: { property: 'Veranstaltungsbeginn', parser: (eventStart) => excelDateToJsDate(eventStart) },
         eventEnd: { property: 'Veranstaltungsende', parser: (eventEnd) => excelDateToJsDate(eventEnd) },
         dismantle: { property: 'Ende externer Abbau', parser: (dismantle) => excelDateToJsDate(dismantle) },
-        end: { property: 'Ende Mantelzeit', parser: (end) => excelDateToJsDate(end) }
+        end: { property: 'Ende Mantelzeit', parser: (end) => excelDateToJsDate(end) },
+        halls: { property: 'Hallen', parser: (halls) => halls.split(',') }
     }
     /**
      * Converts an array of JSON objects into an array of EventTask instances.
@@ -35,7 +36,7 @@ export class EventTask {
      * @param {Object} json - The JSON object to be parsed.
      */
     constructor(json, { mapping = EventTask.mapping } = {}) {
-        const { matchcode, name, start, setup, eventStart, eventEnd, dismantle, end } = parseObject(json, { mapping })
+        const { matchcode, name, start, setup, eventStart, eventEnd, dismantle, end, halls } = parseObject(json, { mapping })
         this.id = matchcode ?? Math.random().toString(16).substring(2)
         this.name = name ?? this.id
         this.start = start ?? new Date()
@@ -44,6 +45,7 @@ export class EventTask {
         this.eventEnd = eventEnd ?? this.start
         this.dismantle = dismantle ?? this.start
         this.end = end ?? this.start
+        this.halls = halls ?? []
         this.progress = this.getProgress()
         this.times = {
             setup: Math.abs(this.start.getTime() - this.setup.getTime()),

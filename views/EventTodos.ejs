@@ -1,0 +1,14 @@
+<div class="w3-theme-l5 event-todos">
+    <div class="w3-bar w3-theme w3-left-align w3-small">
+        <button data-event="click" data-action="createEventTodo" class="w3- bar-item w3-button">create</button>
+        <button data-event="click" data-action="deleteEventTodo" class="w3- bar-item w3-button">delete</button>
+    </div>
+    <ul>
+        <% for (const todo of todos) { %>
+            <li data-event-todo="<%= todo.id %>" data-event="click" data-action="selectEventTodo">
+                <input type="checkbox" <%= todo.done ? 'checked' : '' %> data-event="click" data-action="toggleEventTodo"/>
+                <label data-event="dblclick" data-action="editEventTodo"><%= todo.text %></label>
+            </li>
+        <% } %>
+    </ul>
+</div>
