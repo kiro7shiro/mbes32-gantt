@@ -1,4 +1,4 @@
-import { Control } from './templates/Control.js'
+import { Control } from '../js-templates/index.js'
 
 export class EventTodo {
     static defaults = {
@@ -14,13 +14,17 @@ export class EventTodo {
 }
 
 export class EventTodos {
-    static async build(eventId, { todos = [], template = '/views/EventTodos.ejs' } = {}) {
-        const control = await Control.build(template, { todos }, { events: ['click', 'dblclick'] })
+    static async build(eventId, { todos = [], template = '/views/EventTodos.ejs', container = 'div' } = {}) {
+        const control = await Control.build(template, { todos }, container)
+        return new EventTodos(control, eventId, todos)
+    }
+    static buildSync(eventId, { todos = [], template = '/views/EventTodos.ejs', container = 'div' } = {}) {
+        const control = Control.buildSync(template, { todos }, container)
         return new EventTodos(control, eventId, todos)
     }
     constructor(control, eventId, todos) {
         this.control = control
-        this.element = control.element
+        this.element = control.container
         this.eventId = eventId
         this.todos = []
         this.addTodos(todos)

@@ -37,6 +37,7 @@ class App {
         this.menuBar = new Control(document.getElementById('menuBar'), '')
         this.menuBar.on('fileInput', this.handleFileInput.bind(this))
         this.eventInfos = EventInfos.buildSync({ container: '#eventInfos' })
+        this.eventTodos = EventTodos.buildSync('', { container: '#eventTodos' })
         this.blacklist = blacklist
         this.eventTasks = []
         this.ganttChartOptions = {
@@ -44,7 +45,6 @@ class App {
             popup_on: 'hover'
         }
         this.ganttChart = null
-        this.eventTodos = []
     }
     createEventTodo(id, text, { done = false } = {}) {
         const todo = {
