@@ -1,7 +1,7 @@
 import { parseObject } from './parse.js'
 import { excelDateToJsDate } from './helper.js'
 
-export class EventTask {
+export class EventData {
     /**
      * A mapping of event task properties to the corresponding JSON object properties and
      * value parsers.
@@ -21,13 +21,13 @@ export class EventTask {
      * Converts an array of JSON objects into an array of EventTask instances.
      *
      * @param {Array} array - The array of JSON objects to be converted.
-     * @returns {Array<EventTask>} - An array of EventTask instances.
+     * @returns {Array<EventData>} - An array of EventTask instances.
      */
     static fromArray(array) {
         const result = new Array(array.length)
         for (let index = 0; index < array.length; index++) {
             const json = array[index]
-            result[index] = new EventTask(json)
+            result[index] = new EventData(json)
         }
         return result
     }
@@ -35,7 +35,7 @@ export class EventTask {
      * Creates an EventTask object from a JSON object.
      * @param {Object} json - The JSON object to be parsed.
      */
-    constructor(json, { mapping = EventTask.mapping } = {}) {
+    constructor(json, { mapping = EventData.mapping } = {}) {
         const { matchcode, name, start, setup, eventStart, eventEnd, dismantle, end, halls } = parseObject(json, { mapping })
         this.id = matchcode ?? Math.random().toString(16).substring(2)
         this.name = name ?? this.id

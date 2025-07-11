@@ -1,6 +1,6 @@
 import { compileOptions, preload, Control } from './js-templates/index.js'
 import { excelDateToJsDate } from './src/helper.js'
-import { EventTask } from './src/EventTask.js'
+import { EventData } from './src/EventData.js'
 import { EventTodos } from './src/EventTodos.js'
 import { EventInfos } from './src/EventInfos.js'
 
@@ -118,7 +118,7 @@ class App {
             const sheet = workbook.Sheets[workbook.SheetNames[0]]
             const json = XLSX.utils.sheet_to_json(sheet)
             const filtered = json.filter((eventTask) => !self.blacklist.some((predicate) => predicate(eventTask)))
-            const eventTasks = EventTask.fromArray(filtered)
+            const eventTasks = EventData.fromArray(filtered)
             self.createGanttChart('#gantt-chart', eventTasks, self.ganttChartOptions)
         }
         reader.readAsArrayBuffer(event.detail.files[0])
@@ -133,26 +133,6 @@ async function main() {
 }
 
 main()
-
-async function test() {
-    const eventEditor = await EventEditor.build(/* {
-        infos: { id: 'test-id', taskName: 'test-task', start: new Date(), end: new Date(), halls: ['2.2', '1.2'] },
-        todos: [
-            { id: 'test-id', text: 'test-todo', done: false },
-            { id: 'test-id-2', text: 'test-todo-2', done: true }
-        ]
-    } */)
-    await eventEditor.render({ id: 'test-id', taskName: 'test-task', start: new Date(), end: new Date(), halls: ['2.2', '1.2'] }, [
-        { text: 'test-todo', done: false },
-        { text: 'test-todo-2', done: true }
-    ])
-    document.body.insertAdjacentElement('beforeend', eventEditor.element)
-    console.log(eventEditor)
-}
-
-//test()
-
-// make it sync
 
 function downloadJsonFile(data, filename) {
     const json = JSON.stringify(data, null, 4)
