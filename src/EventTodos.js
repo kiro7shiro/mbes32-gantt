@@ -18,8 +18,8 @@ export class EventTodos {
         const control = await Control.build(template, { todos }, container)
         return new EventTodos(control, eventId, todos)
     }
-    static buildSync(eventId, { todos = [], template = '/views/EventTodos.ejs', container = 'div' } = {}) {
-        const control = Control.buildSync(template, { todos }, container)
+    static buildSync(eventId, { todos = [], template = '/views/EventTodos.ejs', container = 'div', events = ['click', 'dblclick'] } = {}) {
+        const control = Control.buildSync(template, { todos }, container, events)
         return new EventTodos(control, eventId, todos)
     }
     constructor(control, eventId, todos) {

@@ -1,22 +1,7 @@
-// TODO :
-// [x] create app
-//      [ ] save app data
-//      [ ] load app data
-// [x] events gantt chart
-//     [x] load file data into gantt tasks
-//      [x] build gantt chart
-//      [x] show gantt chart
-// [ ] events todos
-//      [ ] create, update, delete todos
-//      [ ] show todo status
-
-import { compileOptions, preload, render, renderSync, Control } from './js-templates/index.js'
-
+import { compileOptions, preload, Control } from './js-templates/index.js'
 import { excelDateToJsDate } from './src/helper.js'
 import { EventTask } from './src/EventTask.js'
 import { EventTodos } from './src/EventTodos.js'
-import { EventEditor } from './src/EventEditor.js'
-
 import { EventInfos } from './src/EventInfos.js'
 
 const eventDataBlacklist = [
@@ -37,7 +22,7 @@ class App {
         this.menuBar = new Control(document.getElementById('menuBar'), '')
         this.menuBar.on('fileInput', this.handleFileInput.bind(this))
         this.eventInfos = EventInfos.buildSync({ container: '#eventInfos' })
-        this.eventTodos = EventTodos.buildSync('', { container: '#eventTodos' })
+        this.eventTodos = EventTodos.buildSync('', { container: '#eventTodos', events: ['click', 'dblclick'] })
         this.blacklist = blacklist
         this.eventTasks = []
         this.ganttChartOptions = {
