@@ -8,8 +8,8 @@ import { Control } from '../js-templates/index.js'
 
 export class EventInfos {
     static defaults = {
-        id: 'event-details-id',
-        name: 'event-details-task-name',
+        id: 'event-infos-id',
+        name: 'event-infos-name',
         start: new Date(),
         end: new Date(),
         halls: []
