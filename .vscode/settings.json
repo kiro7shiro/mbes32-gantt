@@ -1,6 +1,7 @@
 {
     "liveServer.settings.mount": [
         ["/views", "/views"],
-        ["/js-templates", "../js-templates"]
+        ["/js-templates", "../js-templates"],
+        ["/data", "/data"]
     ]
 }

@@ -6,6 +6,7 @@ export class EventTodo {
         text: 'event-todo-text',
         done: false
     }
+    static fromArray(array) {}
     constructor(id, { text, done } = EventTodo.defaults) {
         this.id = id
         this.text = text

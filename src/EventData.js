@@ -3,7 +3,7 @@ import { excelDateToJsDate } from './helper.js'
 
 export class EventData {
     /**
-     * A mapping of event task properties to the corresponding JSON object properties and
+     * A mapping of event data properties to the corresponding JSON object properties and
      * value parsers.
      */
     static mapping = {
@@ -15,29 +15,30 @@ export class EventData {
         eventEnd: { property: 'Veranstaltungsende', parser: (eventEnd) => excelDateToJsDate(eventEnd) },
         dismantle: { property: 'Ende externer Abbau', parser: (dismantle) => excelDateToJsDate(dismantle) },
         end: { property: 'Ende Mantelzeit', parser: (end) => excelDateToJsDate(end) },
-        halls: { property: 'Hallen', parser: (halls) => halls.split(',') }
+        halls: { property: 'Hallen', parser: (halls) => halls.split(',').map((h) => h.trim()) }
     }
     /**
-     * Converts an array of JSON objects into an array of EventTask instances.
+     * Converts an array of JSON objects into an array of EventData instances.
      *
      * @param {Array} array - The array of JSON objects to be converted.
-     * @returns {Array<EventData>} - An array of EventTask instances.
+     * @returns {Array<EventData>} - An array of EventData instances.
      */
-    static fromArray(array) {
-        const result = new Array(array.length)
-        for (let index = 0; index < array.length; index++) {
-            const json = array[index]
+    static fromArray(array, { blacklist = [] } = {}) {
+        const filtered = array.filter((json) => !blacklist.some((predicate) => predicate(json)))
+        const result = new Array(filtered.length)
+        for (let index = 0; index < filtered.length; index++) {
+            const json = filtered[index]
             result[index] = new EventData(json)
         }
         return result
     }
     /**
-     * Creates an EventTask object from a JSON object.
+     * Creates an EventData object from a JSON object.
      * @param {Object} json - The JSON object to be parsed.
      */
     constructor(json, { mapping = EventData.mapping } = {}) {
         const { matchcode, name, start, setup, eventStart, eventEnd, dismantle, end, halls } = parseObject(json, { mapping })
-        this.id = matchcode ?? Math.random().toString(16).substring(2)
+        this.id = matchcode.replace('/', '-bs-') ?? Math.random().toString(16).substring(2)
         this.name = name ?? this.id
         this.start = start ?? new Date()
         this.setup = setup ?? this.start
