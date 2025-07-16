@@ -1,0 +1,4 @@
+<li data-todo-id="<%= todo.id %>" data-event="click" data-action="selectEventTodo">
+    <input type="checkbox" <%= todo.done ? 'checked' : '' %> data-event="click" data-action="toggleEventTodo"/>
+    <label data-event="dblclick" data-action="editEventTodo"><%= todo.text %></label>
+</li>

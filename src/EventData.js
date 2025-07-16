@@ -23,12 +23,12 @@ export class EventData {
      * @param {Array} array - The array of JSON objects to be converted.
      * @returns {Array<EventData>} - An array of EventData instances.
      */
-    static fromArray(array, { blacklist = [] } = {}) {
+    static fromArray(array, { blacklist = [], mapping = EventData.mapping } = {}) {
         const filtered = array.filter((json) => !blacklist.some((predicate) => predicate(json)))
         const result = new Array(filtered.length)
         for (let index = 0; index < filtered.length; index++) {
             const json = filtered[index]
-            result[index] = new EventData(json)
+            result[index] = new EventData(json, { mapping })
         }
         return result
     }
@@ -38,7 +38,7 @@ export class EventData {
      */
     constructor(json, { mapping = EventData.mapping } = {}) {
         const { matchcode, name, start, setup, eventStart, eventEnd, dismantle, end, halls } = parseObject(json, { mapping })
-        this.id = matchcode.replace('/', '-bs-') ?? Math.random().toString(16).substring(2)
+        this.id = matchcode.replace('/', '-bs-') ?? crypto.randomUUID()
         this.name = name ?? this.id
         this.start = start ?? new Date()
         this.setup = setup ?? this.start

@@ -5,10 +5,7 @@
     </div>
     <ul>
         <% for (const todo of todos) { %>
-            <li data-event-todo="<%= todo.id %>" data-event="click" data-action="selectEventTodo">
-                <input type="checkbox" <%= todo.done ? 'checked' : '' %> data-event="click" data-action="toggleEventTodo"/>
-                <label data-event="dblclick" data-action="editEventTodo"><%= todo.text %></label>
-            </li>
+            <%- include('/views/EventTodo.ejs', { todo }) %>
         <% } %>
     </ul>
 </div>

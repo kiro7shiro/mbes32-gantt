@@ -2,7 +2,7 @@ import { compileOptions, preload, Control } from './js-templates/index.js'
 import { excelDateToJsDate } from './src/helper.js'
 import { EventData } from './src/EventData.js'
 import { EventInfos } from './src/EventInfos.js'
-import { EventTodos } from './src/EventTodos.js'
+import { EventTodo, EventTodos } from './src/EventTodos.js'
 import { EventsGanttChart } from './src/EventsGanttChart.js'
 
 const eventDataBlacklist = [
@@ -19,25 +19,31 @@ const eventDataBlacklist = [
 ]
 
 class App {
-    constructor(json, { blacklist = [] } = {}) {
+    constructor(eventsData, eventsTodos, { blacklist = [] } = {}) {
+        // data
+        this.blacklist = blacklist
+        this.eventsData = EventData.fromArray(eventsData, { blacklist })
+        this.eventsTodos = EventTodo.fromArray(eventsTodos)
+        // ui controls
         this.menuBar = new Control(document.getElementById('menuBar'), '')
         this.menuBar.on('fileInput', this.handleFileInput.bind(this))
-        this.eventInfos = EventInfos.buildSync({ container: '#eventInfos' })
-        this.eventTodos = EventTodos.buildSync('', { container: '#eventTodos', events: ['click', 'dblclick'] })
-        this.blacklist = blacklist
-        this.eventsData = EventData.fromArray(json, { blacklist })
         this.ganttChartOptions = {
             container_height: 600,
             popup_on: 'hover'
         }
+        this.eventInfos = EventInfos.buildSync({ container: '#eventInfos' })
+        // TODO : implement build() and buildSync() for EventsGanntChart()
         this.ganttChart = new EventsGanttChart(this.eventsData, { element: '#gantt-chart', options: this.ganttChartOptions })
+        this.eventTodos = EventTodos.buildSync(this.eventsTodos, { container: '#eventTodos', events: ['click', 'dblclick'] })
+        // ui events
         const self = this
-        this.ganttChart.on('eventBarClick', function (event) {
+        this.ganttChart.on('eventBarClick', function (event) { 
             const { detail: id } = event
             const eventData = self.eventsData.find(function (data) {
                 return data.id === id
             })
             self.eventInfos.renderSync(eventData)
+            self.eventTodos.renderSync(id)
         })
     }
     handleFileInput(event) {
@@ -58,18 +64,28 @@ class App {
 }
 
 async function main() {
+    // set render engine to sync mode and preload template renderers
     compileOptions.async = false
     await preload()
-    const url = new URL('/data/eventsData.json', window.location.origin)
-    const resp = await fetch(url.pathname)
-    if (!resp.ok) {
-        const errorText = await resp.text()
+    // load events data
+    const eventsDataUrl = new URL('/data/eventsData.json', window.location.origin)
+    const eventsDataResp = await fetch(eventsDataUrl.pathname)
+    if (!eventsDataResp.ok) {
+        const errorText = await eventsDataResp.text()
         throw new Error(`Failed to fetch data: ${errorText}`)
     }
-    const json = await resp.json()
-    console.log(json)
-    const app = new App(json, { blacklist: eventDataBlacklist })
-    console.log(app)
+    const eventsDataJson = await eventsDataResp.json()
+    // load todos data
+    const eventsTodosUrl = new URL('/data/eventsTodos.json', window.location.origin)
+    const eventsTodosResp = await fetch(eventsTodosUrl.pathname)
+    if (!eventsTodosResp.ok) {
+        const errorText = await eventsTodosResp.text()
+        throw new Error(`Failed to fetch data: ${errorText}`)
+    }
+    const eventsTodosJson = await eventsTodosResp.json()
+    // load app
+    const app = new App(eventsDataJson, eventsTodosJson, { blacklist: eventDataBlacklist })
+    window.app = app
 }
 
 main()

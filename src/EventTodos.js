@@ -1,61 +1,71 @@
-import { Control } from '../js-templates/index.js'
+import { parseObject } from './parse.js'
+import { Control, render, renderSync } from '../js-templates/index.js'
 
+// one todo instance, provides general helper functions, too
 export class EventTodo {
     static defaults = {
-        id: -1,
+        id: null,
+        eventId: null,
         text: 'event-todo-text',
         done: false
     }
-    static fromArray(array) {}
-    constructor(id, { text, done } = EventTodo.defaults) {
-        this.id = id
+    static fromArray(array, { mapping = {} } = {}) {
+        const result = new Array(array.length)
+        for (let index = 0; index < array.length; index++) {
+            const json = array[index]
+            result[index] = new EventTodo(json, { mapping })
+        }
+        return result
+    }
+    constructor(json, { mapping = {} } = {}) {
+        const { eventId, text, done } = parseObject(json, { mapping })
+        //this.id = `_${crypto.randomUUID()}`
+        this.id = `A_${Math.random().toString(16).substring(2)}`
+        this.eventId = eventId
         this.text = text
         this.done = done
     }
 }
 
 export class EventTodos {
-    static async build(eventId, { todos = [], template = '/views/EventTodos.ejs', container = 'div' } = {}) {
-        const control = await Control.build(template, { todos }, container)
-        return new EventTodos(control, eventId, todos)
+    static async build(eventsTodos, { template = '/views/EventTodos.ejs', container = 'div', events = ['click', 'dblclick'] } = {}) {
+        const control = await Control.build(template, { todos: [] }, container, events)
+        return new EventTodos(control, eventsTodos)
     }
-    static buildSync(eventId, { todos = [], template = '/views/EventTodos.ejs', container = 'div', events = ['click', 'dblclick'] } = {}) {
-        const control = Control.buildSync(template, { todos }, container, events)
-        return new EventTodos(control, eventId, todos)
+    static buildSync(eventsTodos, { template = '/views/EventTodos.ejs', container = 'div', events = ['click', 'dblclick'] } = {}) {
+        const control = Control.buildSync(template, { todos: [] }, container, events)
+        return new EventTodos(control, eventsTodos)
     }
-    constructor(control, eventId, todos) {
+    constructor(control, todos) {
         this.control = control
-        this.element = control.container
-        this.eventId = eventId
-        this.todos = []
-        this.addTodos(todos)
+        this.container = control.container
+        this.eventId = null
+        this.todos = todos
+        this.listContainer = this.container.querySelector('ul')
         this.selectedTodo = null
         this.todoEditor = null
-        this.element.addEventListener('selectEventTodo', this.selectTodo.bind(this))
-        this.element.addEventListener('deleteEventTodo', this.deleteTodo.bind(this))
-        this.element.addEventListener('toggleEventTodo', this.toggleTodo.bind(this))
-        this.element.addEventListener('createEventTodo', this.createTodo.bind(this))
-        this.element.addEventListener('editEventTodo', this.editTodo.bind(this))
+        this.container.addEventListener('selectEventTodo', this.selectTodo.bind(this))
+        this.container.addEventListener('createEventTodo', this.createTodo.bind(this))
+        this.container.addEventListener('deleteEventTodo', this.deleteTodo.bind(this))
+        this.container.addEventListener('toggleEventTodo', this.toggleTodo.bind(this))
+        this.container.addEventListener('editEventTodo', this.editTodo.bind(this))
     }
     addTodo({ text, done } = EventTodo.defaults) {
-        const id = `${this.todos.length + 1}`
-        const todo = new EventTodo(id, { text, done })
+        const json = { eventId: this.eventId, text, done }
+        const todo = new EventTodo(json)
         this.todos.push(todo)
         return todo
     }
-    addTodos(todos) {
-        for (const todo of todos) {
-            this.addTodo({ ...todo })
-        }
-    }
-    async createTodo() {
+    createTodo() {
         const todo = this.addTodo()
-        await this.render(this.todos)
+        const html = this.renderTodoSync(todo)
+        const listContainer = this.container.querySelector('ul')
+        listContainer.insertAdjacentHTML('beforeend', html)
         return todo
     }
     deleteTodo() {
         if (this.selectedTodo) {
-            const { eventTodo: id } = this.selectedTodo.dataset
+            const { todoId: id } = this.selectedTodo.dataset
             const index = this.todos.findIndex((todo) => todo.id === id)
             if (index !== -1) {
                 this.todos.splice(index, 1)
@@ -67,27 +77,30 @@ export class EventTodos {
         }
     }
     editTodo(event) {
+        event.preventDefault()
         const { detail: target } = event
-        const todoId = target.parentElement.dataset.eventTodo
+        const parent = target.parentElement
+        const { todoId: id } = parent.dataset
+        const todo = this.todos.find((todo) => todo.id === id)
         const self = this
-        console.log(target, todoId)
-        if (this.todoEditor === null) {
-            this.todoEditor = document.createElement('input')
-            this.todoEditor.style.display = 'none'
-            this.todoEditor.addEventListener('change', function (e) {
-                self.updateTodo(todoId, e.target.value)
-                self.todoEditor.style.display = 'none'
-            })
-            this.element.insertAdjacentElement('beforeend', this.todoEditor)
-        }
-        const targetRect = target.getBoundingClientRect()
-        this.todoEditor.style.top = `${targetRect.top}px`
-        this.todoEditor.style.left = `${targetRect.left}px`
-        this.todoEditor.style.width = `${targetRect.width}px`
-        this.todoEditor.style.height = `${targetRect.height}px`
-        this.todoEditor.placeholder = target.textContent
-        this.todoEditor.style.position = 'absolute'
-        this.todoEditor.style.display = 'block'
+        const todoEditor = document.createElement('input')
+        const targetRect = parent.getBoundingClientRect()
+        todoEditor.style.top = `${targetRect.top}px`
+        todoEditor.style.left = `${targetRect.left}px`
+        todoEditor.style.width = `${targetRect.width - 16}px`
+        todoEditor.style.height = `${targetRect.height}px`
+        todoEditor.placeholder = target.textContent
+        todoEditor.style.position = 'absolute'
+        todoEditor.style.display = 'block'
+        this.container.parentElement.insertAdjacentElement('beforeend', todoEditor)
+        todoEditor.addEventListener('change', function (e) {
+            e.preventDefault()
+            todoEditor.style.display = 'none'
+            todo.text = e.target.value
+            const html = self.renderTodoSync(todo)
+            parent.insertAdjacentHTML('afterend', html)
+            parent.remove()
+        })
     }
     selectTodo(event) {
         const { detail: target } = event
@@ -96,36 +109,47 @@ export class EventTodos {
         this.selectedTodo = target
     }
     toggleTodo(event) {
+        console.log(event)
         const { detail: target } = event
-        const { eventTodo: id } = target.dataset
+        const { todoId: id } = target.parentElement.dataset
         const index = this.todos.findIndex((todo) => todo.id === id)
+        console.log(id, index, this.todos)
         if (index !== -1) {
             this.todos[index].done = !this.todos[index].done
             return true
         }
         return false
     }
-    async render(todos) {
-        const newTodos = todos.filter((todo) => !this.todos.find((existingTodo) => existingTodo.id === todo.id))
-        const updatedTodos = this.todos.map((existingTodo) => {
-            const updatedTodo = todos.find((todo) => todo.id === existingTodo.id)
-            return updatedTodo ? { ...existingTodo, ...updatedTodo } : existingTodo
+    async render(eventId) {
+        this.eventId = eventId
+        const eventTodos = this.todos.filter(function (todo) {
+            return todo.eventId === eventId
         })
-        this.addTodos(newTodos)
-        this.updateTodos(updatedTodos)
-        const html = await this.control.render({ todos: this.todos })
+        const html = await this.control.render({ todos: eventTodos })
         return html
     }
-    updateTodo(id, text, done) {
-        const todo = this.todos.find((todo) => todo.id === id)
-        if (!todo) return false
-        todo.text = text
-        todo.done = done
-        return true
+    renderSync(eventId) {
+        this.eventId = eventId
+        const eventTodos = this.todos.filter(function (todo) {
+            return todo.eventId === eventId
+        })
+        const html = this.control.renderSync({ todos: eventTodos })
+        return html
     }
-    updateTodos(todos) {
-        for (const todo of todos) {
-            this.updateTodo(todo.id, todo.text, todo.done)
-        }
+    async renderTodo(todo, { template = '/views/EventTodo.ejs' } = {}) {
+        const html = await render(template, { todo })
+        const liElement = this.listContainer.querySelector(`#${todo.id}`)
+        liElement.innerHTML = html
+        return html
+    }
+    renderTodoSync(todo, { template = '/views/EventTodo.ejs' } = {}) {
+        const html = renderSync(template, { todo })
+        return html
+    }
+    on(event, handler) {
+        this.container.addEventListener(event, handler)
+    }
+    off(event, handler) {
+        this.container.removeEventListener(event, handler)
     }
 }
