@@ -1,7 +1,6 @@
 import { parseObject } from './parse.js'
 import { Control, render, renderSync } from '../js-templates/index.js'
 
-// one todo instance, provides general helper functions, too
 export class EventTodo {
     static defaults = {
         id: null,
@@ -77,7 +76,6 @@ export class EventTodos {
         }
     }
     editTodo(event) {
-        event.preventDefault()
         const { detail: target } = event
         const parent = target.parentElement
         const { todoId: id } = parent.dataset
@@ -92,14 +90,14 @@ export class EventTodos {
         todoEditor.placeholder = target.textContent
         todoEditor.style.position = 'absolute'
         todoEditor.style.display = 'block'
-        this.container.parentElement.insertAdjacentElement('beforeend', todoEditor)
+        this.container.insertAdjacentElement('beforeend', todoEditor)
         todoEditor.addEventListener('change', function (e) {
-            e.preventDefault()
             todoEditor.style.display = 'none'
             todo.text = e.target.value
             const html = self.renderTodoSync(todo)
             parent.insertAdjacentHTML('afterend', html)
             parent.remove()
+            todoEditor.remove()
         })
     }
     selectTodo(event) {
@@ -109,11 +107,9 @@ export class EventTodos {
         this.selectedTodo = target
     }
     toggleTodo(event) {
-        console.log(event)
         const { detail: target } = event
         const { todoId: id } = target.parentElement.dataset
         const index = this.todos.findIndex((todo) => todo.id === id)
-        console.log(id, index, this.todos)
         if (index !== -1) {
             this.todos[index].done = !this.todos[index].done
             return true
@@ -138,8 +134,6 @@ export class EventTodos {
     }
     async renderTodo(todo, { template = '/views/EventTodo.ejs' } = {}) {
         const html = await render(template, { todo })
-        const liElement = this.listContainer.querySelector(`#${todo.id}`)
-        liElement.innerHTML = html
         return html
     }
     renderTodoSync(todo, { template = '/views/EventTodo.ejs' } = {}) {
