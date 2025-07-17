@@ -18,8 +18,7 @@ export class EventTodo {
     }
     constructor(json, { mapping = {} } = {}) {
         const { eventId, text, done } = parseObject(json, { mapping })
-        //this.id = `_${crypto.randomUUID()}`
-        this.id = `A_${Math.random().toString(16).substring(2)}`
+        this.id = crypto.randomUUID()
         this.eventId = eventId
         this.text = text
         this.done = done
@@ -40,7 +39,6 @@ export class EventTodos {
         this.container = control.container
         this.eventId = null
         this.todos = todos
-        this.listContainer = this.container.querySelector('ul')
         this.selectedTodo = null
         this.todoEditor = null
         this.container.addEventListener('selectEventTodo', this.selectTodo.bind(this))
@@ -91,6 +89,7 @@ export class EventTodos {
         todoEditor.style.position = 'absolute'
         todoEditor.style.display = 'block'
         this.container.insertAdjacentElement('beforeend', todoEditor)
+        todoEditor.focus()
         todoEditor.addEventListener('change', function (e) {
             todoEditor.style.display = 'none'
             todo.text = e.target.value
