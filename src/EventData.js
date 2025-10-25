@@ -54,8 +54,7 @@ export class EventData {
             duration: Math.abs(this.start.getTime() - this.end.getTime())
         }
     }
-
-    createGradient({ colors = ['#FFFF00', '#FF0000', '#00FF00'], opacity = 1 } = {}) {
+    createGradient({ colors = ['#F00', '#0F0', '#FF0'], opacity = 1 } = {}) {
         const { setup, event, duration } = this.times
         const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient')
         gradient.id = `${this.id}_gradient`
@@ -67,6 +66,37 @@ export class EventData {
             { offset: (setup + event) / duration, color: colors[2] },
             { offset: 1, color: colors[2] }
         ]
+        stops.forEach(({ offset, color }) => {
+            const stop = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
+            stop.setAttribute('offset', `${offset * 100}%`)
+            stop.setAttribute('stop-color', color)
+            stop.setAttribute('stop-opacity', `${opacity}`)
+            gradient.appendChild(stop)
+        })
+        return gradient
+    }
+    createProgressGradient({ colors = ['#F00', '#0F0', '#FF0'], opacity = 1 } = {}) {
+        const { setup, event, duration } = this.times
+        const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient')
+        gradient.id = `${this.id}_gradient`
+        const today = duration * (this.progress / 100)
+        const stops = []
+        if (today < setup) {
+            stops.push({ offset: 0, color: colors[0] })
+            stops.push({ offset: 1, color: colors[0] })
+        } else if (today > setup) {
+            stops.push({ offset: 0, color: colors[0] })
+            stops.push({ offset: setup / duration, color: colors[0] })
+            stops.push({ offset: setup / duration, color: colors[1] })
+            stops.push({ offset: 1, color: colors[1] })
+        } else if (today > event) {
+            stops.push({ offset: 0, color: colors[0] })
+            stops.push({ offset: setup / duration, color: colors[0] })
+            stops.push({ offset: setup / duration, color: colors[1] })
+            stops.push({ offset: (setup + event) / duration, color: colors[1] })
+            stops.push({ offset: (setup + event) / duration, color: colors[2] })
+            stops.push({ offset: 1, color: colors[2] })
+        }
         stops.forEach(({ offset, color }) => {
             const stop = document.createElementNS('http://www.w3.org/2000/svg', 'stop')
             stop.setAttribute('offset', `${offset * 100}%`)
