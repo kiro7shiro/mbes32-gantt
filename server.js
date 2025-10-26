@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 const express = require('express')
 const app = express()
-const templates = require('../js-templates/app.js')()
 const gantt = require('./app.js')
 
 const PORT = 5500
 
 app.use(express.json())
-app.use(templates)
 app.use(gantt)
 
 const server = app.listen(PORT, function () {
