@@ -3,7 +3,7 @@
 const fs = require('fs')
 const path = require('path')
 const express = require('express')
-const templates = require('../js-templates/app.js')()
+const templates = require('js-templates/app.js')()
 
 const app = express()
 app.use(templates)
