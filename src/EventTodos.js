@@ -1,5 +1,6 @@
 import { parseObject } from './parse.js'
-import { Control, render, renderSync } from '../js-templates/index.js'
+import { render, renderSync } from '/src/templates.js'
+import { Control } from '/src/Control.js'
 
 export class EventTodo {
     static defaults = {

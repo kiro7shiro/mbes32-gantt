@@ -1,0 +1,30 @@
+.upload-button {
+    position: relative;
+    display: inline-block;
+}
+
+.upload-button input[type='file'] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    z-index: 1;
+    cursor: pointer;
+}
+
+.upload-button label {
+    position: relative;
+    z-index: 0;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.event-infos {
+    border-radius: 8px;
+    overflow: hidden;
+}
+.event-todos {
+    border-radius: 8px;
+    overflow: hidden;
+}

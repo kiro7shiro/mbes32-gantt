@@ -1,10 +1,5 @@
-// What do you want to do?
-// render a template with data and get back a DOM element
-// save the event handlers for the DOM element in a class
-// the class instance should have a render function that rerenders the template and sets the outer html of the html element
-// call one function to build the class instance
-
-import { Control } from '../js-templates/index.js'
+// TODO : show a map of the messe gelände
+import { Control } from '/src/Control.js'
 
 export class EventInfos {
     static defaults = {
