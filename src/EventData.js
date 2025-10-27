@@ -84,7 +84,7 @@ export class EventData {
         if (today < setup) {
             stops.push({ offset: 0, color: colors[0] })
             stops.push({ offset: 1, color: colors[0] })
-        } else if (today > setup) {
+        } else if (today > setup && today < event) {
             stops.push({ offset: 0, color: colors[0] })
             stops.push({ offset: setup / duration, color: colors[0] })
             stops.push({ offset: setup / duration, color: colors[1] })
